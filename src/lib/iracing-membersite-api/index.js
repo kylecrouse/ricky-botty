@@ -69,6 +69,14 @@ class Client {
 			.then(({ data }) => data)
 	}
 	
+	removeLeagueMember(leagueid, custid) {
+		return this.instance({
+			method: 'post',
+			url: `/member/RemoveLeagueMember`,
+			data: serialize({ leagueid, custid }).toString()
+		})
+	}
+	
 	updateLeagueMemberCarNumber(leagueID, memberID, theValue) {
 		return this.instance({
 			method: 'post',
