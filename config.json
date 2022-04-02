@@ -1,0 +1,23 @@
+{
+	"clientId": "780607586734178394",
+	"guildId": "428309139496763392",
+	"channelId": {
+		"announcements": "444658830463205376",
+		"applications": "644978012781150218",
+		"chat": "805887754188750888",
+		"output-series-chat": "428309139496763395",
+		"night-owl-series-chat": "929804929781080174",
+		"drivers-council": "563049857544224779",
+		"applications": "644978012781150218",
+		"post-your-wins": "581717430284582913",
+		"orl-bot": "786286236855828500",
+		"welcome": "476442982787317760"
+	},
+	"roleId": {
+		"admin": "444243389131653121",
+		"driversCouncil": "563049954256355331"
+	},
+	"webhookId": {
+		"applications": "951930505606070332"
+	}
+}
