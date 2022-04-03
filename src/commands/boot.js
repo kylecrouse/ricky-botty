@@ -52,5 +52,7 @@ module.exports = {
 				row.save()
 			})
 		
+		interaction.editReply('Done!')
+		
 	}
 }
