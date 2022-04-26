@@ -26,7 +26,7 @@ client.once('ready', async () => {
 	)
 	
 	if (embeds.length > 0) 
-		await channel.send({ embeds })
+		await channel.send({ content: '@everyone', embeds })
 	else
 		console.log(`No sessions scheduled for today.`)
 	
