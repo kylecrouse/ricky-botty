@@ -3,7 +3,8 @@ const moment = require('moment-timezone')
 const client = require('../src/lib/discord')
 const iracing = require('../src/lib/iracing-membersite-api')
 const SessionEmbed = require('../src/embeds/session')
-const { leagueId, channelId } = require('../src/constants.json')
+const { leagueId } = require('../src/constants.json')
+const { channelId } = require('../config.json')
 
 client.once('ready', async () => {
 	console.log(`Logged in as ${client.user.tag}!`)
