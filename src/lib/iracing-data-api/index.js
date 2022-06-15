@@ -2,6 +2,7 @@ const axios = require('axios')
 const { CookieJar } = require('tough-cookie')
 const { HttpCookieAgent, HttpsCookieAgent } = require('http-cookie-agent')
 const dotenv = require('dotenv').config()
+const CryptoJS = require('crypto-js')
 
 class Client {
 	
@@ -14,6 +15,9 @@ class Client {
 			httpsAgent: new HttpsCookieAgent({ jar }),
 		})
 
+		let hash = CryptoJS.SHA256(password + email.toLowerCase())
+		let hashInBase64 = CryptoJS.enc.Base64.stringify(hash)
+
 		// Authenticate if responds unauthorized
 		this.instance.interceptors.response.use(
 			response => response,
@@ -21,7 +25,7 @@ class Client {
 				const { config, response: { status }} = error
 				switch (status) {
 					case 401:
-						return this.authenticate(email, password)
+						return this.authenticate(email, hashInBase64)
 							.then(() => this.instance(config))
 					case 503:
 						return Promise.reject(new Error('iRacing down for site maintenance'))

@@ -2,6 +2,7 @@ const axios = require('axios')
 const { CookieJar } = require('tough-cookie')
 const { HttpCookieAgent, HttpsCookieAgent } = require('http-cookie-agent')
 const dotenv = require('dotenv').config()
+const CryptoJS = require('crypto-js')
 
 class Client {
 	
@@ -14,11 +15,14 @@ class Client {
 			httpsAgent: new HttpsCookieAgent({ jar }),
 		})
 		
+		let hash = CryptoJS.SHA256(password + email.toLowerCase())
+		let hashInBase64 = CryptoJS.enc.Base64.stringify(hash)
+		
 		// Authenticate if redirected to login page
 		this.instance.interceptors.response.use(response => {
 			if (response.headers['content-type'].indexOf('text/html') !== -1
 					&& response.request.res.responseUrl.indexOf('login.jsp') !== -1)
-				return this.authenticate(email, password)
+				return this.authenticate(email, hashInBase64)
 					.then(() => this.instance(response.config))
 			else 
 				return response

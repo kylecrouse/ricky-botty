@@ -9,6 +9,7 @@
     "axios": "^0.26.1",
     "contentful": "^9.1.13",
     "contentful-management": "^8.2.2",
+    "crypto-js": "^4.1.1",
     "discord-api-types": "^0.28.0",
     "discord.js": "^13.6.0",
     "dotenv": "^16.0.0",
