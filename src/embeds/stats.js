@@ -9,11 +9,11 @@ module.exports = async (member) => {
 	// Get contentful entry for member
 	const { items: [entry] } = await cda.getEntries({
 		content_type: 'driver',
-		'fields.discordId': member.user.id,
+		'fields.discordId': member.id ?? member.user.id,
 	})
 	
 	const embed = new MessageEmbed()
-		.setTitle(`**${member.displayName ?? member.user.username}'s League Stats**`)
+		.setTitle(`**${member.displayName ?? member.username ?? member.user.username}'s League Stats**`)
 		.setTimestamp()
 	
 	let files = []
