@@ -20,7 +20,7 @@ module.exports = async (member) => {
 	
 	const { custId, media, numberArt } = entry.fields
 	
-	await axios(`https://api.simracerhub.com/participation/${custId}/1710`)
+	await axios(`https://api.simracerhub.com/leagues/1710/participation/${custId}`)
 		.then(({ data }) => {
 			[
 				{ 
