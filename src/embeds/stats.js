@@ -4,6 +4,10 @@ const sharp = require('sharp')
 const moment = require('moment')
 const cda = require('../lib/contentful')
 
+const baseUrl = process.env.NODE_ENV === 'production'
+	? 'https://api.simracerhub.com'
+	: 'http://localhost:3000'
+
 module.exports = async (member) => {
 
 	// Get contentful entry for member
@@ -20,7 +24,7 @@ module.exports = async (member) => {
 	
 	const { custId, media, numberArt } = entry.fields
 	
-	await axios(`https://api.simracerhub.com/leagues/1710/participation/${custId}`)
+	await axios(`${baseUrl}/leagues/1710/participation/${custId}`)
 		.then(({ data }) => {
 			[
 				{ 
