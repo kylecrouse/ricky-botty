@@ -34,5 +34,5 @@ module.exports = async (message) => {
 
 		])
 	
-	return message.reply({ embeds: [embed], components: [row] })
+	return message.reply({ embeds: [embed]/*, components: [row]*/ })
 }
