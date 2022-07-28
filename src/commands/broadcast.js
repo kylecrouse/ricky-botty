@@ -19,12 +19,6 @@ module.exports = {
 		.setDefaultPermission(false),
 	async execute(interaction) {
 		
-		const url = interaction.options.getString('url')
-		
-		const match = url.match(/(https:\/\/www.youtube.com\/(watch\?v=|embed\/))?(?<id>[a-zA-Z0-9]+)/)
-		
-		console.log(match)
-
 		await interaction.deferReply({ 
 			ephemeral: true//process.env.NODE_ENV !== 'production' 
 		})
