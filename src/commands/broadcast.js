@@ -18,6 +18,12 @@ module.exports = {
 		)
 		.setDefaultPermission(false),
 	async execute(interaction) {
+		
+		const url = interaction.options.getString('url')
+		
+		const match = url.match(/(https:\/\/www.youtube.com\/(watch\?v=|embed\/))?(?<id>[a-zA-Z0-9]+)/)
+		
+		console.log(match)
 
 		await interaction.deferReply({ 
 			ephemeral: true//process.env.NODE_ENV !== 'production' 
@@ -62,8 +68,13 @@ module.exports = {
 				raceNumber = Math.floor(raceNumber)
 				const event = response.data.events.find(event => event.raceNumber === raceNumber)
 				const url = interaction.options.getString('url')
-		
-				await setLeagueRaceBroadcast(url, event, response.data)
+				
+				const match = url.match(/(https:\/\/www.youtube.com\/(watch\?v=|embed\/))?(?<id>[a-zA-Z0-9]+)/)
+				
+				if (!match?.groups?.id)
+					return i.editReply({ content: 'Video ID could not be parsed from URL.', embeds: [], components: [] })	
+				
+				await setLeagueRaceBroadcast(`https://www.youtube.com/embed/${match.groups.id}`, event, response.data)
 				
 				i.editReply({ content: 'Done!', embeds: [], components: [] })	
 			} 
