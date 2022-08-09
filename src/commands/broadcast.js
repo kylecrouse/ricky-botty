@@ -23,6 +23,9 @@ module.exports = {
 			ephemeral: true//process.env.NODE_ENV !== 'production' 
 		})
 		
+		if (!interaction.options.getString('url'))
+			return interaction.editReply({ content: 'YouTube URL not provided', embeds: [], components: [] })	
+		
 		// Get events for current season
 		const response = await axios(`${baseUrl}/series/6842/schedule`)
 
