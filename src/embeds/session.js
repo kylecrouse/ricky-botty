@@ -21,7 +21,7 @@ module.exports = async (session) => {
 			`Practice: ${sessionLaunch.format('h:mma z')} (${session.practicedur} min)\u000a` +
 			`Qual: ${sessionLaunch.add(session.practicedur, 'm').format('h:mma z')} ` +
 				`(${session.qualtype == 'L' ? `${session.qualifylaps} laps solo` : `${session.qualifylength} min open`})\u000a` +
-			`Grid: ${sessionLaunch.add(session.practicedur + session.qualifylength, 'm').format('h:mma z')}`
+			`Grid: ${sessionLaunch.add(session.qualifylength, 'm').format('h:mma z')}`
 		)
 		.addField(
 			`\u200B\u000A**${session.track_name.replace(/\+/g, ' ')}**`, 
