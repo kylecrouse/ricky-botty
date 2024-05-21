@@ -1,5 +1,5 @@
-const { Client, Intents } = require('discord.js')
-const dotenv = require('dotenv').config()
+import { Client, Intents } from 'discord.js'
+import 'dotenv/config'
 
 const client = new Client({ 
 	intents: [
@@ -12,4 +12,4 @@ const client = new Client({
 
 client.login(process.env.DISCORD_ACCESS_TOKEN)
 
-module.exports = client
+export default client

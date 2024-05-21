@@ -1,9 +1,8 @@
-const axios = require('axios')
-const path = require('path')
-const { CookieJar } = require('tough-cookie')
-const { HttpCookieAgent, HttpsCookieAgent } = require('http-cookie-agent')
-const dotenv = require('dotenv').config({ path: path.join(__dirname, '.env') })
-const CryptoJS = require('crypto-js')
+import axios from 'axios'
+import { CookieJar } from 'tough-cookie'
+import { HttpCookieAgent, HttpsCookieAgent } from 'http-cookie-agent'
+import CryptoJS from 'crypto-js'
+import 'dotenv/config'
 
 class Client {
 	
@@ -99,4 +98,4 @@ const serialize = (data) => {
 	return params
 }
 
-module.exports = new Client(process.env.IRACING_USERNAME, process.env.IRACING_PASSWORD)
+export default new Client(process.env.IRACING_USERNAME, process.env.IRACING_PASSWORD)

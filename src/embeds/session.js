@@ -1,66 +1,182 @@
-const { MessageEmbed } = require('discord.js')
-const moment = require('moment-timezone')
-const iracing = require('../lib/iracing-data-api')
-const { timeOfDay } = require('../constants.json')
+import { MessageEmbed } from "discord.js";
+import axios from "axios";
+import moment from "moment-timezone";
+import iracing from "../lib/iracing-data-api/index.js";
+import constants from "../constants.json" assert { type: "json" };
 
-module.exports = async (session) => {
+const { timeOfDay } = constants;
 
-	const tracks = await iracing.getTracks()
-	
-	const sessionLaunch = moment(session.launchat).tz("America/Los_Angeles")
-	
-	const tod = session.timeOfDay === 4 
-		? moment(decode(session.simulatedstarttime)).format('ddd, MMM Do YYYY @ h:mma z')
-		: timeOfDay[session.timeOfDay]
-		
-	const embed = new MessageEmbed()
-		.setTitle(`**${decode(session.league_season_name)}**`)
-		.setThumbnail(`https://images-static.iracing.com${tracks[session.trackid]?.logo}`)
-		.addField(
-			`**${sessionLaunch.format('dddd, MMMM Do')}**`,
-			`Practice: ${sessionLaunch.format('h:mma z')} (${session.practicedur} min)\u000a` +
-			`Qual: ${sessionLaunch.add(session.practicedur, 'm').format('h:mma z')} ` +
-				`(${session.qualtype == 'L' ? `${session.qualifylaps} laps solo` : `${session.qualifylength} min open`})\u000a` +
-			`Grid: ${sessionLaunch.add(session.qualifylength, 'm').format('h:mma z')}`
-		)
-		.addField(
-			`\u200B\u000A**${session.track_name.replace(/\+/g, ' ')}**`, 
-			`Time of Day: ${tod}\u000A` +
-			`${session.config_name ? `Configuration: ${decode(session.config_name)}\u000A` : ''}` +
-			`Distance: ${session.racelaps > 0 ? `${session.racelaps} laps` : `${session.racelength} minutes`}\u000A` +
-			`Weather: ${session.weather_type == 1 ? 'dynamic weather/sky' : `${session.weather_temp_value}°F`}\u000A` +
-			`Conditions: practice ${session.rubberlevel_practice == -1 ? 'automatically generated' : `${session.rubberlevel_practice}%`}, ` +
-				`qual ${session.rubberlevel_qualify == -1 ? 'carries over' : `${session.rubberlevel_qualify}%`}, ` + 
-				`race ${session.rubberlevel_race == -1 ? 'carries over' : `${session.rubberlevel_race}%`}\u000A` +
-			`Cautions: ${session.fullcoursecautions == 1 ? 'on' : 'local only' }` +
-			`${session.fullcoursecautions == 1 ? `\u000AG/W/C: ${session.gwclimit} attempts` : ''}`
-		)
-		.addField(
-			'\u200B\u000A',
-			`**${session.cars.length > 1 ? 'Cars' : 'Car'}:** ${makeCommaSeparatedString(session.cars.map(car => decode(car.car_name)))}\u000A` +
-			`**Setup:** ${session.fixedSetup ? `fixed (${session.cars[0].racesetupfilename})` : 'open'}\u000A` +
-			`**Fuel:** ${session.cars[0].max_pct_fuel_fill}%\u000A` +
-			`**Tires:** ${session.cars[0].max_dry_tire_sets != 0 ? `${session.cars[0].max_dry_tire_sets} sets ` +
-				`(starting + ${session.cars[0].max_dry_tire_sets - 1})` : 'unlimited'}\u000A` +
-			`**Fast Repairs:** ${session.numfasttows >= 0 ? session.numfasttows == 0 ? 'none' : session.numfasttows : 'unlimited'}\u000A` +
-			`**Incidents:** ${session.incident_warn_mode ? `penalty @ ${session.incident_warn_param1}x${session.incident_warn_param2 > 0 ? ` then every ${session.incident_warn_param2}x` : ''}\u000a` : ''}` +
-				`${session.incident_limit > 0 ? `disqualify @ ${session.incident_limit}x` : ''}`
-		)
-		.setTimestamp()
+export default async (session) => {
+  const tracks = await iracing.getTracks();
 
-	return embed
+  const sessionLaunch = moment(session.launch_at).tz("America/Los_Angeles");
+  const raceOffset =
+    session.weather.simulated_time_offsets[
+      session.weather.simulated_time_offsets.length - 1
+    ];
+  const tod =
+    session.weather.time_of_day === 4
+      ? moment(decode(session.weather.simulated_start_time))
+          .add(raceOffset, "m")
+          .format("ddd, MMM Do YYYY @ h:mma z")
+      : timeOfDay[session.weather.time_of_day];
 
-}
+  const forecast = await axios
+    .get(session.weather.weather_url)
+    .then(({ data }) => data)
+    .then((data) => data.find(({ time_offset }) => time_offset === raceOffset));
+
+  const cloudCover =
+    forecast.cloud_cover < 1 / 8
+      ? "Clear"
+      : forecast.cloud_cover < 3 / 8
+      ? "Mostly clear"
+      : forecast.cloud_cover < 5 / 8
+      ? "Partly cloudy"
+      : forecast.cloud_cover < 7 / 8
+      ? "Mostly cloudy"
+      : "Overcast";
+
+  const windCondition =
+    forecast.wind_speed < 500
+      ? "moderate breeze"
+      : forecast.windw_speed < 400
+      ? "gentle breeze"
+      : forecast.wind_speed < 300
+      ? "light breeze"
+      : forecast.wind_speed < 200
+      ? "light air"
+      : forecast.wind_speed < 100
+      ? "calm"
+      : "variable";
+
+  const embed = new MessageEmbed()
+    .setTitle(
+      `**${decode(session.league_name)} - ${decode(
+        session.league_season_name
+      )}**`
+    )
+    .setThumbnail(
+      `https://images-static.iracing.com${tracks[session.track_id]?.logo}`
+    )
+    .addField(
+      `**${sessionLaunch.format("dddd, MMMM Do")}**`,
+      `Practice: ${sessionLaunch.format("h:mma z")} (${
+        session.practice_length
+      } min)\u000a` +
+        `Qual: ${sessionLaunch
+          .add(session.practice_length, "m")
+          .format("h:mma z")} ` +
+        `(${
+          session.lone_qualify
+            ? `${session.qualify_laps} laps solo`
+            : `${session.qualify_length} min open`
+        })\u000a` +
+        `Grid: ${sessionLaunch
+          .add(session.qualify_length, "m")
+          .format("h:mma z")}`
+    )
+    .addField(
+      `\u200B\u000A**${session.track.track_name.replace(/\+/g, " ")}**`,
+      `Time of Day: ${tod} (${session.weather.simulated_time_multiplier}x)\u000A` +
+        `${
+          session.track.config_name
+            ? `Configuration: ${decode(session.track.config_name)}\u000A`
+            : ""
+        }` +
+        `Distance: ${
+          session.race_laps > 0
+            ? `${session.race_laps} laps`
+            : `${session.race_length} minutes`
+        }\u000A` +
+        `Race Forecast: ${cloudCover} ${Math.floor(
+          (forecast.air_temp / 100) * 1.8 + 32
+        )}°F ${windCondition} \u000A` +
+        `Conditions: practice ${
+          session.track_state.practice_rubber == -1
+            ? "automatically generated"
+            : `${session.track_state.practice_rubber}%`
+        }, ` +
+        `qual ${
+          session.track_state.qualify_rubber == -1
+            ? "carries over"
+            : `${session.track_state.qualify_rubber}%`
+        }, ` +
+        `race ${
+          session.track_state.race_rubber == -1
+            ? "carries over"
+            : `${session.track_state.race_rubber}%`
+        }\u000A` +
+        `Cautions: ${session.full_course_cautions ? "on" : "local only"}` +
+        `${
+          session.full_course_cautions
+            ? `\u000AG/W/C: ${session.green_white_checkered_limit} attempts`
+            : ""
+        }`
+    )
+    .addField(
+      "\u200B\u000A",
+      `**${
+        session.cars.length > 1 ? "Cars" : "Car"
+      }:** ${makeCommaSeparatedString(
+        session.cars.map((car) => decode(car.car_name))
+      )}\u000A` +
+        `**Setup:** ${
+          session.fixed_setup
+            ? `fixed (${session.cars[0].race_setup_filename})`
+            : "open"
+        }\u000A` +
+        `**Fuel:** ${session.cars[0].max_pct_fuel_fill}%\u000A` +
+        `**Tires:** ${
+          session.cars[0].max_dry_tire_sets != 0
+            ? `${session.cars[0].max_dry_tire_sets} sets ` +
+              `(starting + ${session.cars[0].max_dry_tire_sets - 1})`
+            : "unlimited"
+        }\u000A` +
+        `${
+          session.damage_model === 3
+            ? `**Damage:** Off`
+            : `**Fast Repairs:** ${
+                session.num_fast_tows >= 0
+                  ? session.num_fast_tows == 0
+                    ? "none"
+                    : session.num_fast_tows
+                  : "unlimited"
+              }`
+        }\u000A` +
+        `**Incidents:** ${
+          session.incident_warn_mode
+            ? `penalty @ ${session.incident_warn_param1}x${
+                session.incident_warn_param2 > 0
+                  ? ` then every ${session.incident_warn_param2}x`
+                  : ""
+              }\u000a`
+            : ""
+        }` +
+        `${
+          session.incident_limit > 0
+            ? `disqualify @ ${session.incident_limit}x`
+            : ""
+        }`
+    )
+    .setTimestamp();
+
+  return embed;
+};
 
 function decode(string) {
-	return decodeURIComponent(string.replace(/\+/g, ' '))
+  return decodeURIComponent(string.replace(/\+/g, " "));
 }
 
 function makeCommaSeparatedString(arr, useOxfordComma) {
-	const listStart = arr.slice(0, -1).join(', ');
-	const listEnd = arr.slice(-1);
-	const conjunction = arr.length <= 1 ? '' :
-		useOxfordComma && arr.length > 2 ? ', and ' : ' and ';
+  const listStart = arr.slice(0, -1).join(", ");
+  const listEnd = arr.slice(-1);
+  const conjunction =
+    arr.length <= 1
+      ? ""
+      : useOxfordComma && arr.length > 2
+      ? ", and "
+      : " and ";
 
-	return [listStart, listEnd].join(conjunction);
+  return [listStart, listEnd].join(conjunction);
 }
