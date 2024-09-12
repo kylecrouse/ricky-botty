@@ -24,18 +24,18 @@ export default async (session) => {
   const forecast = await axios
     .get(session.weather.weather_url)
     .then(({ data }) => data)
-    .then((data) => data.find(({ time_offset }) => time_offset === raceOffset));
+    .then((data) => data.find(({ time_offset }) => time_offset >= raceOffset));
 
   const cloudCover =
-    forecast.cloud_cover < 1 / 8
-      ? "Clear"
-      : forecast.cloud_cover < 3 / 8
-      ? "Mostly clear"
-      : forecast.cloud_cover < 5 / 8
-      ? "Partly cloudy"
-      : forecast.cloud_cover < 7 / 8
-      ? "Mostly cloudy"
-      : "Overcast";
+    forecast.cloud_cover / 1000 < 1 / 8
+      ? "clear"
+      : forecast.cloud_cover / 1000 < 3 / 8
+      ? "mostly clear"
+      : forecast.cloud_cover / 1000 < 5 / 8
+      ? "partly cloudy"
+      : forecast.cloud_cover / 1000 < 7 / 8
+      ? "mostly cloudy"
+      : "overcast";
 
   const windCondition =
     forecast.wind_speed < 500
@@ -52,28 +52,46 @@ export default async (session) => {
 
   const embed = new MessageEmbed()
     .setTitle(
-      `**${decode(session.league_name)} - ${decode(
+      `**${decode(session.league_name)}${
         session.league_season_name
-      )}**`
+          ? ` - ${decode(session.league_season_name)}`
+          : ""
+      }**`
     )
     .setThumbnail(
-      `https://images-static.iracing.com${tracks[session.track_id]?.logo}`
+      `https://images-static.iracing.com${tracks[session.track.track_id]?.logo}`
     )
     .addField(
       `**${sessionLaunch.format("dddd, MMMM Do")}**`,
       `Practice: ${sessionLaunch.format("h:mma z")} (${
-        session.practice_length
+        session.is_heat_racing
+          ? session.heat_ses_info.pre_qual_practice_length_minutes
+          : session.practice_length
       } min)\u000a` +
         `Qual: ${sessionLaunch
-          .add(session.practice_length, "m")
+          .add(
+            session.is_heat_racing
+              ? session.heat_ses_info.pre_qual_practice_length_minutes
+              : session.practice_length,
+            "m"
+          )
           .format("h:mma z")} ` +
         `(${
-          session.lone_qualify
+          session.is_heat_racing
+            ? session.heat_ses_info.qual_style === 1
+              ? `${session.heat_ses_info.qual_laps} laps solo`
+              : `${session.heat_ses_info.qual_length_minutes} min open`
+            : session.lone_qualify
             ? `${session.qualify_laps} laps solo`
             : `${session.qualify_length} min open`
         })\u000a` +
         `Grid: ${sessionLaunch
-          .add(session.qualify_length, "m")
+          .add(
+            session.is_heat_racing
+              ? session.heat_ses_info.qual_length_minutes
+              : session.qualify_length,
+            "m"
+          )
           .format("h:mma z")}`
     )
     .addField(
@@ -84,14 +102,16 @@ export default async (session) => {
             ? `Configuration: ${decode(session.track.config_name)}\u000A`
             : ""
         }` +
-        `Distance: ${
-          session.race_laps > 0
-            ? `${session.race_laps} laps`
-            : `${session.race_length} minutes`
+        `${
+          session.is_heat_racing
+            ? `Format: ${session.heat_ses_info.heat_info_name}`
+            : session.race_laps > 0
+            ? `Distance: ${session.race_laps} laps`
+            : `Distance: ${session.race_length} minutes`
         }\u000A` +
-        `Race Forecast: ${cloudCover} ${Math.floor(
+        `Forecast: ${Math.floor(
           (forecast.air_temp / 100) * 1.8 + 32
-        )}°F ${windCondition} \u000A` +
+        )}°F ${cloudCover} with ${windCondition} \u000A` +
         `Conditions: practice ${
           session.track_state.practice_rubber == -1
             ? "automatically generated"
