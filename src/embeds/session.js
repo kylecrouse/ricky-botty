@@ -177,6 +177,11 @@ export default async (session) => {
           session.incident_limit > 0
             ? `disqualify @ ${session.incident_limit}x`
             : ""
+        }` +
+        `${
+          !(session.incident_limit > 0 || session.incident_warn_mode)
+            ? "no limit"
+            : ""
         }`
     )
     .setTimestamp();
