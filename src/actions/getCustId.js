@@ -1,12 +1,12 @@
-const iracing = require('../lib/iracing-membersite-api')
+const iracing = require('../lib/iracing-data-api')
 
 module.exports = async name => {
-	const { searchRacers = [] } = await iracing.getDriverStatus(name)
-		
-	if (!searchRacers?.length > 0)
-		return null
-		
-	const [{ custid }] = searchRacers
+	const result = await iracing.getDriverLookup(name)
 
-	return custid ?? null
+	if (!result?.length > 0)
+		return null
+
+	const [{ cust_id }] = result
+
+	return cust_id ?? null
 }

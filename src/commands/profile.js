@@ -1,5 +1,4 @@
 const { SlashCommandBuilder } = require('@discordjs/builders')
-const iracing = require('../lib/iracing-membersite-api')
 const getCustId = require('../actions/getCustId')
 const ProfileEmbed = require('../embeds/profile')
 

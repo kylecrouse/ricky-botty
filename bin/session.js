@@ -6,10 +6,30 @@ import SessionEmbed from "../src/embeds/session.js";
 import constants from "../src/constants.json" assert { type: "json" };
 import config from "../config.json" assert { type: "json" };
 
+import Anthropic from "@anthropic-ai/sdk";
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
 const { leagueId } = constants;
 const { channelId } = config;
 
 client.once("ready", async () => {
+  const message = false;
+  //  await anthropic.messages.create({
+  //   max_tokens: 1024,
+  //   messages: [
+  //     {
+  //       role: "user",
+  //       content:
+  //         "write a tweet from Ricky Botty, a robot in the style of the character Ricky Bobby, announcing a race today. no hashtags. mention @everyone in the message. only include the tweet in your response.",
+  //     },
+  //   ],
+  //   model: "claude-3-opus-20240229",
+  // });
+
+  console.dir(message, { depth: null });
+
   console.log(`Logged in as ${client.user.tag}!`);
 
   const channel =
@@ -64,7 +84,12 @@ client.once("ready", async () => {
       .map(SessionEmbed)
   );
 
-  if (embeds.length > 0) await channel.send({ content: "@everyone", embeds });
+  let content = "@everyone";
+  if (message?.content?.length > 0) {
+    content = message.content[0].text?.split("\n").pop() ?? content;
+  }
+
+  if (embeds.length > 0) await channel.send({ content, embeds });
   else console.log(`No sessions scheduled for today.`);
 
   exit();

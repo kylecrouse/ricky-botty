@@ -1,54 +1,92 @@
 import axios from "axios";
-import { CookieJar } from "tough-cookie";
-import { HttpCookieAgent, HttpsCookieAgent } from "http-cookie-agent";
+import createAuthRefreshInterceptorModule from "axios-auth-refresh";
+const createAuthRefreshInterceptor = createAuthRefreshInterceptorModule.default ?? createAuthRefreshInterceptorModule;
 import { config } from "dotenv";
 import CryptoJS from "crypto-js";
 
 config({ path: "./.env" });
 
+const mask = (secret, id) => {
+  const hash = CryptoJS.SHA256(secret + id.toLowerCase());
+  return CryptoJS.enc.Base64.stringify(hash);
+};
+
 class Client {
-  constructor(email, password) {
-    const jar = new CookieJar();
+  constructor(username, password, clientId, clientSecret) {
+    this._username = username;
+    this._password = password;
+    this._clientId = clientId;
+    this._clientSecret = clientSecret;
+
+    this._accessToken = null;
+    this._refreshToken = null;
+    this._tokenExpiry = null;
 
     this.instance = axios.create({
       baseURL: "https://members-ng.iracing.com",
-      httpAgent: new HttpCookieAgent({ jar }),
-      httpsAgent: new HttpsCookieAgent({ jar }),
     });
 
-    let hash = CryptoJS.SHA256(password + email.toLowerCase());
-    let hashInBase64 = CryptoJS.enc.Base64.stringify(hash);
-
-    // Authenticate if responds unauthorized
-    this.instance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        const {
-          config,
-          response: { status },
-        } = error;
-        switch (status) {
-          case 401:
-            return this.authenticate(email, hashInBase64).then(() =>
-              this.instance(config)
-            );
-          case 503:
-            return Promise.reject(
-              new Error("iRacing down for site maintenance")
-            );
-          default:
-            return Promise.reject(error);
-        }
+    // Add Authorization header to all API requests
+    this.instance.interceptors.request.use((config) => {
+      if (this._accessToken) {
+        config.headers.Authorization = `Bearer ${this._accessToken}`;
       }
+      return config;
+    });
+
+    // Set up auth refresh interceptor
+    createAuthRefreshInterceptor(this.instance, () =>
+      this._handleAuthFailure()
     );
   }
 
-  authenticate(email, password) {
-    return this.instance({
-      method: "post",
-      url: "/auth",
-      data: serialize({ email, password }).toString(),
-    });
+  _authenticate() {
+    const maskedPassword = mask(this._password, this._username);
+    const maskedSecret = mask(this._clientSecret, this._clientId);
+
+    return axios
+      .post(
+        "https://oauth.iracing.com/oauth2/token",
+        new URLSearchParams({
+          grant_type: "password_limited",
+          client_id: this._clientId,
+          client_secret: maskedSecret,
+          username: this._username,
+          password: maskedPassword,
+          scope: "iracing.auth",
+        }),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      )
+      .then(({ data }) => {
+        this._accessToken = data.access_token;
+        this._refreshToken = data.refresh_token;
+        this._tokenExpiry = Date.now() + data.expires_in * 1000;
+      });
+  }
+
+  _refreshAccessToken() {
+    return axios
+      .post(
+        "https://oauth.iracing.com/oauth2/token",
+        new URLSearchParams({
+          grant_type: "refresh_token",
+          client_id: this._clientId,
+          refresh_token: this._refreshToken,
+        }),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      )
+      .then(({ data }) => {
+        this._accessToken = data.access_token;
+        this._refreshToken = data.refresh_token;
+        this._tokenExpiry = Date.now() + data.expires_in * 1000;
+      });
+  }
+
+  _handleAuthFailure() {
+    if (this._refreshToken) {
+      return this._refreshAccessToken().catch(() => this._authenticate());
+    }
+    return this._authenticate();
   }
 
   async getCars(ids = null) {
@@ -67,6 +105,12 @@ class Client {
           []
         ))
       : cars;
+  }
+
+  getDriverLookup(search_term) {
+    return this.get(
+      `/data/lookup/drivers?search_term=${encodeURIComponent(search_term)}`
+    );
   }
 
   getLeague(league_id, include_licenses = false) {
@@ -135,21 +179,15 @@ class Client {
 
   get(url) {
     return this.instance(url)
-      .then(({ data: { link } }) => this.instance(link))
+      .then(({ data: { link } }) => axios.get(link))
       .then(({ data }) => data)
       .catch((err) => console.dir({ err }));
   }
 }
 
-const serialize = (data) => {
-  const params = new URLSearchParams();
-  Object.entries(data).forEach(([key, value]) => {
-    params.append(key, value);
-  });
-  return params;
-};
-
 export default new Client(
   process.env.IRACING_USERNAME,
-  process.env.IRACING_PASSWORD
+  process.env.IRACING_PASSWORD,
+  process.env.IRACING_OAUTH_CLIENT_ID,
+  process.env.IRACING_OAUTH_CLIENT_SECRET
 );

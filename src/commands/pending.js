@@ -2,7 +2,6 @@ const { MessageActionRow, MessageButton, MessageSelectMenu } = require('discord.
 const { SlashCommandBuilder } = require('@discordjs/builders')
 const { getRows } = require('../lib/google')
 const sendInvitationEmail = require('../lib/google/gmail')
-const iracing = require('../lib/iracing-membersite-api')
 const setApplicationStatus = require('../actions/setApplicantStatus')
 const ProfileEmbed = require('../embeds/profile')
 const { channelId } = require('../../config.json')
@@ -113,8 +112,6 @@ module.exports = {
 			try {
 				let invite = null
 				if (status === 'YES') {
-					await iracing.sendLeagueRequest(custId, 2732)
-					
 					const channel = await i.guild.channels.fetch(channelId.welcome)
 					invite = await channel.createInvite({
 						unique: true,
